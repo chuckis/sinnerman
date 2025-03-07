@@ -4,107 +4,96 @@ import EasyStar from 'easystarjs';
 export default class BaseScene extends Phaser.Scene {
     constructor() {
         super({ key: 'BaseScene' });
-        this.easystar = new EasyStar.js();
+        this.initializeProperties();
+    }
+
+    initializeProperties() {
+        // Grid configuration
         this.gridSize = 10;
-        this.tileSize = 64;  // Size of each grid tile
+        this.tileSize = 64;
+        
+        // Movement state
+        this.currentGridX = 2;
+        this.currentGridY = 2;
         this.currentPathIndex = 0;
         this.isMoving = false;
-        this.currentGridX = 2; // Track current grid position
-        this.currentGridY = 2;
+        
+        // Visual elements
         this.debugText = null;
         this.highlightTile = null;
+        
+        // Pathfinding
+        this.easystar = new EasyStar.js();
+        this.grid = [];
+        this.pathPoints = [];
     }
 
     preload() {
-        // Load a simple placeholder sprite for our dummy object
         this.load.image('dummy', 'https://labs.phaser.io/assets/sprites/block.png');
     }
 
     create() {
-        // Set up camera
+        this.initializeGrid();
+        this.setupPathfinding();
+        this.createDummy();
+        this.setupCamera();
+        this.setupInput();
+        this.setupVisualElements();
+        this.updateVisualFeedback();
+    }
+
+    setupCamera() {
         this.cameras.main.setBackgroundColor('#2d2d2d');
-        
-        // Create a simple grid for pathfinding (0 = walkable, 1 = blocked)
-        this.grid = [];
+        this.cameras.main.startFollow(this.dummy, true, 0.1, 0.1);
+    }
+
+    initializeGrid() {
         for (let y = 0; y < this.gridSize; y++) {
-            this.grid[y] = [];
-            for (let x = 0; x < this.gridSize; x++) {
-                this.grid[y][x] = 0;
-            }
+            this.grid[y] = Array(this.gridSize).fill(0);
         }
 
-        // Add some obstacles
-        this.grid[2][2] = 1;
-        this.grid[3][3] = 1;
-        this.grid[4][4] = 1;
+        // Add obstacles
+        const obstacles = [
+            { x: 2, y: 2 },
+            { x: 3, y: 3 },
+            { x: 4, y: 4 }
+        ];
+        
+        obstacles.forEach(({ x, y }) => {
+            this.grid[y][x] = 1;
+        });
+    }
 
-        // Set up EasyStar
+    setupPathfinding() {
         this.easystar.setGrid(this.grid);
         this.easystar.setAcceptableTiles([0]);
         this.easystar.enableDiagonals();
         this.easystar.enableCornerCutting();
         this.easystar.setIterationsPerCalculation(1000);
+    }
 
-        // Create dummy object at a valid grid position
+    createDummy() {
         this.dummy = this.add.sprite(
-            this.currentGridX * this.tileSize + this.tileSize/2,
-            this.currentGridY * this.tileSize + this.tileSize/2,
+            this.getWorldX(this.currentGridX),
+            this.getWorldY(this.currentGridY),
             'dummy'
         );
         this.dummy.setScale(1.5);
         this.dummy.setTint(0xff0000);
-        this.dummy.setDepth(1); // Ensure it's above the grid
+        this.dummy.setDepth(1);
+    }
 
-        // Add click handler for movement
-        this.input.on('pointerdown', (pointer) => {
-            if (this.isMoving) return; // Prevent new movement while already moving
+    setupInput() {
+        this.input.on('pointerdown', this.handleClick.bind(this));
+    }
 
-            // Convert screen coordinates to grid coordinates
-            const gridX = Math.floor(pointer.x / this.tileSize);
-            const gridY = Math.floor(pointer.y / this.tileSize);
-
-            // Debug output
-            console.log('Click grid pos:', gridX, gridY);
-
-            // Check if coordinates are within grid bounds
-            if (gridX < 0 || gridX >= this.gridSize || 
-                gridY < 0 || gridY >= this.gridSize) {
-                console.log('Target position is outside the grid!');
-                return;
-            }
-
-            // Find path
-            this.easystar.findPath(
-                this.currentGridX, 
-                this.currentGridY, 
-                gridX, 
-                gridY, 
-                (path) => {
-                    if (path === null) {
-                        console.log('No path found!');
-                        return;
-                    }
-
-                    // Convert path points to world coordinates
-                    this.pathPoints = path.map(point => ({
-                        x: point.x * this.tileSize + this.tileSize/2,
-                        y: point.y * this.tileSize + this.tileSize/2
-                    }));
-
-                    // Start moving along the path
-                    this.currentPathIndex = 0;
-                    this.isMoving = true;
-                    this.moveToNextPoint();
-                }
-            );
-
-            this.easystar.calculate();
-        });
-
-        // Add visual grid for debugging
+    setupVisualElements() {
         this.drawGrid();
+        this.setupDebugText();
+        this.setupHighlightTile();
+    }
 
-        // Add debug text
+    setupDebugText() {
         this.debugText = this.add.text(10, 10, '', {
             fontFamily: 'Arial',
             fontSize: '16px',
@@ -113,46 +102,79 @@ export default class BaseScene extends Phaser.Scene {
             padding: { x: 5, y: 5 }
         });
         this.debugText.setDepth(2);
-
-        // Create highlight tile
-        this.highlightTile = this.add.graphics();
-        this.highlightTile.setDepth(1);
-
-        // Center camera on dummy
-        this.cameras.main.startFollow(this.dummy, true, 0.1, 0.1);
-
-        // Initial update of visual feedback
-        this.updateVisualFeedback();
     }
 
-    updateVisualFeedback() {
-        // Update debug text
-        this.debugText.setText([
-            `Current Grid Position: (${this.currentGridX}, ${this.currentGridY})`,
-            `World Position: (${Math.round(this.dummy.x)}, ${Math.round(this.dummy.y)})`,
-            `Moving: ${this.isMoving ? 'Yes' : 'No'}`
-        ]);
+    setupHighlightTile() {
+        this.highlightTile = this.add.graphics();
+        this.highlightTile.setDepth(1);
+    }
 
-        // Update highlight tile
-        this.highlightTile.clear();
-        this.highlightTile.lineStyle(2, 0x00ff00);
+    handleClick(pointer) {
+        if (this.isMoving) return;
+
+        const gridPos = this.screenToGrid(pointer.x, pointer.y);
         
-        // Draw rectangle for the current tile
-        this.highlightTile.strokeRect(
-            this.currentGridX * this.tileSize,
-            this.currentGridY * this.tileSize,
-            this.tileSize,
-            this.tileSize
+        if (!this.isValidGridPosition(gridPos)) {
+            console.log('Target position is outside the grid!');
+            return;
+        }
+
+        this.findPath(gridPos);
+    }
+
+    screenToGrid(screenX, screenY) {
+        return {
+            x: Math.floor(screenX / this.tileSize),
+            y: Math.floor(screenY / this.tileSize)
+        };
+    }
+
+    isValidGridPosition({ x, y }) {
+        return x >= 0 && x < this.gridSize && y >= 0 && y < this.gridSize;
+    }
+
+    findPath(targetPos) {
+        this.easystar.findPath(
+            this.currentGridX,
+            this.currentGridY,
+            targetPos.x,
+            targetPos.y,
+            this.handlePathFound.bind(this)
         );
+        this.easystar.calculate();
+    }
+
+    handlePathFound(path) {
+        if (!path) {
+            console.log('No path found!');
+            return;
+        }
+
+        this.pathPoints = path.map(point => ({
+            x: this.getWorldX(point.x),
+            y: this.getWorldY(point.y)
+        }));
+
+        this.startMovement();
+    }
+
+    startMovement() {
+        this.currentPathIndex = 0;
+        this.isMoving = true;
+        this.moveToNextPoint();
+    }
+
+    getWorldX(gridX) {
+        return gridX * this.tileSize + this.tileSize / 2;
+    }
+
+    getWorldY(gridY) {
+        return gridY * this.tileSize + this.tileSize / 2;
     }
 
     moveToNextPoint() {
         if (this.currentPathIndex >= this.pathPoints.length - 1) {
-            this.isMoving = false;
-            // Update current grid position
-            this.currentGridX = Math.floor(this.dummy.x / this.tileSize);
-            this.currentGridY = Math.floor(this.dummy.y / this.tileSize);
-            this.updateVisualFeedback();
+            this.completeMovement();
             return;
         }
 
@@ -172,6 +194,37 @@ export default class BaseScene extends Phaser.Scene {
         });
     }
 
+    completeMovement() {
+        this.isMoving = false;
+        this.currentGridX = Math.floor(this.dummy.x / this.tileSize);
+        this.currentGridY = Math.floor(this.dummy.y / this.tileSize);
+        this.updateVisualFeedback();
+    }
+
+    updateVisualFeedback() {
+        this.updateDebugText();
+        this.updateHighlightTile();
+    }
+
+    updateDebugText() {
+        this.debugText.setText([
+            `Current Grid Position: (${this.currentGridX}, ${this.currentGridY})`,
+            `World Position: (${Math.round(this.dummy.x)}, ${Math.round(this.dummy.y)})`,
+            `Moving: ${this.isMoving ? 'Yes' : 'No'}`
+        ]);
+    }
+
+    updateHighlightTile() {
+        this.highlightTile.clear();
+        this.highlightTile.lineStyle(2, 0x00ff00);
+        this.highlightTile.strokeRect(
+            this.currentGridX * this.tileSize,
+            this.currentGridY * this.tileSize,
+            this.tileSize,
+            this.tileSize
+        );
+    }
+
     drawGrid() {
         const graphics = this.add.graphics();
         graphics.lineStyle(1, 0x666666);
@@ -189,11 +242,10 @@ export default class BaseScene extends Phaser.Scene {
         }
 
         graphics.strokePath();
-        graphics.setDepth(0); // Ensure grid is below sprites
+        graphics.setDepth(0);
     }
 
     update() {
-        // Update visual feedback every frame
         this.updateVisualFeedback();
     }
 } 
