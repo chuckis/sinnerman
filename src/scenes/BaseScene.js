@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import EasyStar from 'easystarjs';
+import NPC from '../entities/NPC';
 
 export default class BaseScene extends Phaser.Scene {
     constructor() {
@@ -29,6 +30,9 @@ export default class BaseScene extends Phaser.Scene {
         this.easystar = new EasyStar.js();
         this.grid = [];
         this.pathPoints = [];
+
+        // NPC
+        this.npc = null;
     }
 
     preload() {
@@ -39,6 +43,7 @@ export default class BaseScene extends Phaser.Scene {
         this.initializeGrid();
         this.setupPathfinding();
         this.createDummy();
+        this.createNPC();
         this.setupCamera();
         this.setupInput();
         this.setupVisualElements();
@@ -85,6 +90,10 @@ export default class BaseScene extends Phaser.Scene {
         this.dummy.setScale(1.5);
         this.dummy.setTint(0xff0000);
         this.dummy.setDepth(1);
+    }
+
+    createNPC() {
+        this.npc = new NPC(this, 8 * this.tileSize + this.tileSize/2, 8 * this.tileSize + this.tileSize/2, 'dummy');
     }
 
     setupInput() {
@@ -262,7 +271,8 @@ export default class BaseScene extends Phaser.Scene {
             `Mouse Grid Position: (${this.mouseGridX}, ${this.mouseGridY})`,
             `World Position: (${Math.round(this.dummy.x)}, ${Math.round(this.dummy.y)})`,
             `Moving: ${this.isMoving ? 'Yes' : 'No'}`,
-            `Target: ${this.pathPoints.length > 0 ? `(${Math.floor(this.pathPoints[this.pathPoints.length - 1].x / this.tileSize)}, ${Math.floor(this.pathPoints[this.pathPoints.length - 1].y / this.tileSize)})` : 'None'}`
+            `Target: ${this.pathPoints.length > 0 ? `(${Math.floor(this.pathPoints[this.pathPoints.length - 1].x / this.tileSize)}, ${Math.floor(this.pathPoints[this.pathPoints.length - 1].y / this.tileSize)})` : 'None'}`,
+            `NPC Position: (8, 8)`
         ]);
     }
 
