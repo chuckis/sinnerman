@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import EasyStar from 'easystarjs';
 import NPC from '../entities/NPC';
+import Dialogue from '../entities/Dialogue';
 
 export default class BaseScene extends Phaser.Scene {
     constructor() {
@@ -31,8 +32,9 @@ export default class BaseScene extends Phaser.Scene {
         this.grid = [];
         this.pathPoints = [];
 
-        // NPC
+        // NPC and Dialogue
         this.npc = null;
+        this.dialogue = null;
     }
 
     preload() {
@@ -47,6 +49,7 @@ export default class BaseScene extends Phaser.Scene {
         this.setupCamera();
         this.setupInput();
         this.setupVisualElements();
+        this.setupDialogue();
         this.updateVisualFeedback();
     }
 
@@ -97,7 +100,7 @@ export default class BaseScene extends Phaser.Scene {
     }
 
     createNPC() {
-        this.npc = new NPC(this, 8 * this.tileSize + this.tileSize/2, 8 * this.tileSize + this.tileSize/2, 'dummy');
+        this.npc = new NPC(this, 8 * this.tileSize + this.tileSize/2, 2 * this.tileSize + this.tileSize/2, 'dummy');
         
         // Add collision between dummy and NPC
         this.physics.add.collider(this.dummy, this.npc, this.handleCollision, null, this);
@@ -114,6 +117,7 @@ export default class BaseScene extends Phaser.Scene {
 
     setupInput() {
         this.input.on('pointerdown', this.handleClick.bind(this));
+        this.input.keyboard.on('keydown-SPACE', this.handleSpaceKey.bind(this));
     }
 
     setupVisualElements() {
@@ -296,7 +300,8 @@ export default class BaseScene extends Phaser.Scene {
             `World Position: (${Math.round(this.dummy.x)}, ${Math.round(this.dummy.y)})`,
             `Moving: ${this.isMoving ? 'Yes' : 'No'}`,
             `Target: ${this.pathPoints.length > 0 ? `(${Math.floor(this.pathPoints[this.pathPoints.length - 1].x / this.tileSize)}, ${Math.floor(this.pathPoints[this.pathPoints.length - 1].y / this.tileSize)})` : 'None'}`,
-            `NPC Position: (8, 8)`
+            `NPC Position: (8, 8)`,
+            `Can Interact: ${this.npc && this.npc.canInteract ? 'Yes' : 'No'}`
         ]);
     }
 
@@ -357,7 +362,22 @@ export default class BaseScene extends Phaser.Scene {
         graphics.setDepth(0);
     }
 
+    setupDialogue() {
+        this.dialogue = new Dialogue(this);
+    }
+
+    handleSpaceKey(event) {
+        if (this.dialogue.isActive()) {
+            this.dialogue.nextLine();
+        } else if (this.npc && this.npc.canInteract) {
+            this.npc.interact();
+        }
+    }
+
     update() {
         this.updateVisualFeedback();
+        if (this.npc) {
+            this.npc.update();
+        }
     }
 } 

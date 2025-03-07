@@ -1,10 +1,10 @@
 Project Specification Document: "Echoes of Revelation"  
-*(2D Isometric Narrative-Driven RPG Inspired by Disco Elysium)*  
+*(Narrative-Driven RPG Inspired by Disco Elysium)*  
 
 ---
 
 ### 1. Overview  
-- Genre: Isometric 2D Narrative-Driven RPG  
+- Genre: 2D Narrative-Driven RPG  
 - Platforms: Web-browsers, including mobile (for prototype version) 
 - Target Audience: Fans of story-rich RPGs, mature themes, and psychological depth.  
 - Inspiration: Disco Elysium’s branching narrative, skill-driven dialogue, and atmospheric worldbuilding.  
