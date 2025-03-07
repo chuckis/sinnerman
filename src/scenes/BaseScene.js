@@ -15,8 +15,8 @@ export default class BaseScene extends Phaser.Scene {
         this.tileSize = 64;
         
         // Movement state
-        this.currentGridX = 2;
-        this.currentGridY = 2;
+        this.currentGridX = 0;
+        this.currentGridY = 0;
         this.currentPathIndex = 0;
         this.isMoving = false;
         
@@ -59,7 +59,8 @@ export default class BaseScene extends Phaser.Scene {
         const obstacles = [
             { x: 2, y: 2 },
             { x: 3, y: 3 },
-            { x: 4, y: 4 }
+            { x: 3, y: 4 },
+            { x: 3, y: 5 }
         ];
         
         obstacles.forEach(({ x, y }) => {
@@ -140,6 +141,12 @@ export default class BaseScene extends Phaser.Scene {
             return;
         }
 
+        // Check if target position is an obstacle
+        if (this.grid[gridPos.y][gridPos.x] === 1) {
+            console.log('Cannot move to obstacle position!');
+            return;
+        }
+
         this.findPath(gridPos);
     }
 
@@ -163,6 +170,12 @@ export default class BaseScene extends Phaser.Scene {
     }
 
     findPath(targetPos) {
+        // Check if target is reachable
+        if (this.grid[targetPos.y][targetPos.x] === 1) {
+            console.log('Target position is blocked by obstacle!');
+            return;
+        }
+
         this.easystar.findPath(
             this.currentGridX,
             this.currentGridY,
@@ -176,6 +189,13 @@ export default class BaseScene extends Phaser.Scene {
     handlePathFound(path) {
         if (!path) {
             console.log('No path found!');
+            return;
+        }
+
+        // Verify path doesn't go through obstacles
+        const hasObstacle = path.some(point => this.grid[point.y][point.x] === 1);
+        if (hasObstacle) {
+            console.log('Path goes through obstacle!');
             return;
         }
 
@@ -241,7 +261,8 @@ export default class BaseScene extends Phaser.Scene {
             `Current Grid Position: (${this.currentGridX}, ${this.currentGridY})`,
             `Mouse Grid Position: (${this.mouseGridX}, ${this.mouseGridY})`,
             `World Position: (${Math.round(this.dummy.x)}, ${Math.round(this.dummy.y)})`,
-            `Moving: ${this.isMoving ? 'Yes' : 'No'}`
+            `Moving: ${this.isMoving ? 'Yes' : 'No'}`,
+            `Target: ${this.pathPoints.length > 0 ? `(${Math.floor(this.pathPoints[this.pathPoints.length - 1].x / this.tileSize)}, ${Math.floor(this.pathPoints[this.pathPoints.length - 1].y / this.tileSize)})` : 'None'}`
         ]);
     }
 
