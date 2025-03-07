@@ -90,10 +90,26 @@ export default class BaseScene extends Phaser.Scene {
         this.dummy.setScale(1.5);
         this.dummy.setTint(0xff0000);
         this.dummy.setDepth(1);
+        
+        // Add physics body
+        this.physics.add.existing(this.dummy);
+        this.dummy.body.setSize(32, 32); // Adjust hitbox size
     }
 
     createNPC() {
         this.npc = new NPC(this, 8 * this.tileSize + this.tileSize/2, 8 * this.tileSize + this.tileSize/2, 'dummy');
+        
+        // Add collision between dummy and NPC
+        this.physics.add.collider(this.dummy, this.npc, this.handleCollision, null, this);
+    }
+
+    handleCollision(dummy, npc) {
+        // Stop movement when colliding with NPC
+        if (this.isMoving) {
+            this.isMoving = false;
+            this.tweens.killTweensOf(this.dummy);
+            console.log('Collided with NPC!');
+        }
     }
 
     setupInput() {
@@ -182,6 +198,14 @@ export default class BaseScene extends Phaser.Scene {
         // Check if target is reachable
         if (this.grid[targetPos.y][targetPos.x] === 1) {
             console.log('Target position is blocked by obstacle!');
+            return;
+        }
+
+        // Check if target is the NPC's position
+        const npcGridX = Math.floor(this.npc.x / this.tileSize);
+        const npcGridY = Math.floor(this.npc.y / this.tileSize);
+        if (targetPos.x === npcGridX && targetPos.y === npcGridY) {
+            console.log('Cannot move through NPC!');
             return;
         }
 
