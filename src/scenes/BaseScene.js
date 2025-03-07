@@ -144,9 +144,17 @@ export default class BaseScene extends Phaser.Scene {
     }
 
     screenToGrid(screenX, screenY) {
+        // Get the camera's scroll position
+        const camera = this.cameras.main;
+        
+        // Convert screen coordinates to world coordinates
+        const worldX = (screenX + camera.scrollX) / camera.zoom;
+        const worldY = (screenY + camera.scrollY) / camera.zoom;
+        
+        // Convert world coordinates to grid coordinates
         return {
-            x: Math.floor(screenX / this.tileSize),
-            y: Math.floor(screenY / this.tileSize)
+            x: Math.floor(worldX / this.tileSize),
+            y: Math.floor(worldY / this.tileSize)
         };
     }
 
