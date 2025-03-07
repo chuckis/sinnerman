@@ -5,6 +5,8 @@ export default class BaseScene extends Phaser.Scene {
     constructor() {
         super({ key: 'BaseScene' });
         this.initializeProperties();
+        this.mouseGridX = 0;
+        this.mouseGridY = 0;
     }
 
     initializeProperties() {
@@ -21,6 +23,7 @@ export default class BaseScene extends Phaser.Scene {
         // Visual elements
         this.debugText = null;
         this.highlightTile = null;
+        this.mouseHighlightTile = null;
         
         // Pathfinding
         this.easystar = new EasyStar.js();
@@ -91,6 +94,8 @@ export default class BaseScene extends Phaser.Scene {
         this.drawGrid();
         this.setupDebugText();
         this.setupHighlightTile();
+        this.setupMouseHighlightTile();
+        this.setupMouseMoveHandler();
     }
 
     setupDebugText() {
@@ -107,6 +112,22 @@ export default class BaseScene extends Phaser.Scene {
     setupHighlightTile() {
         this.highlightTile = this.add.graphics();
         this.highlightTile.setDepth(1);
+    }
+
+    setupMouseHighlightTile() {
+        this.mouseHighlightTile = this.add.graphics();
+        this.mouseHighlightTile.setDepth(1);
+    }
+
+    setupMouseMoveHandler() {
+        this.input.on('pointermove', (pointer) => {
+            const gridPos = this.screenToGrid(pointer.x, pointer.y);
+            if (this.isValidGridPosition(gridPos)) {
+                this.mouseGridX = gridPos.x;
+                this.mouseGridY = gridPos.y;
+                this.updateMouseHighlight();
+            }
+        });
     }
 
     handleClick(pointer) {
@@ -204,11 +225,13 @@ export default class BaseScene extends Phaser.Scene {
     updateVisualFeedback() {
         this.updateDebugText();
         this.updateHighlightTile();
+        this.updateMouseHighlight();
     }
 
     updateDebugText() {
         this.debugText.setText([
             `Current Grid Position: (${this.currentGridX}, ${this.currentGridY})`,
+            `Mouse Grid Position: (${this.mouseGridX}, ${this.mouseGridY})`,
             `World Position: (${Math.round(this.dummy.x)}, ${Math.round(this.dummy.y)})`,
             `Moving: ${this.isMoving ? 'Yes' : 'No'}`
         ]);
@@ -220,6 +243,17 @@ export default class BaseScene extends Phaser.Scene {
         this.highlightTile.strokeRect(
             this.currentGridX * this.tileSize,
             this.currentGridY * this.tileSize,
+            this.tileSize,
+            this.tileSize
+        );
+    }
+
+    updateMouseHighlight() {
+        this.mouseHighlightTile.clear();
+        this.mouseHighlightTile.lineStyle(2, 0x00ffff);
+        this.mouseHighlightTile.strokeRect(
+            this.mouseGridX * this.tileSize,
+            this.mouseGridY * this.tileSize,
             this.tileSize,
             this.tileSize
         );
@@ -239,6 +273,21 @@ export default class BaseScene extends Phaser.Scene {
         for (let y = 0; y <= this.gridSize; y++) {
             graphics.moveTo(0, y * this.tileSize);
             graphics.lineTo(this.gridSize * this.tileSize, y * this.tileSize);
+        }
+
+        // Draw obstacles
+        for (let y = 0; y < this.gridSize; y++) {
+            for (let x = 0; x < this.gridSize; x++) {
+                if (this.grid[y][x] === 1) {
+                    graphics.fillStyle(0xff0000, 0.3);
+                    graphics.fillRect(
+                        x * this.tileSize,
+                        y * this.tileSize,
+                        this.tileSize,
+                        this.tileSize
+                    );
+                }
+            }
         }
 
         graphics.strokePath();
