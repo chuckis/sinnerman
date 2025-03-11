@@ -10,8 +10,7 @@ export default class Hero extends Phaser.GameObjects.Sprite {
         this.scene = scene;
         
         // Visual setup
-        this.setScale(1.5);
-        this.setTint(0xff0000);
+        this.setScale(2);
         this.setDepth(1);
         
         // Add physics body
@@ -26,8 +25,12 @@ export default class Hero extends Phaser.GameObjects.Sprite {
         this.isMoving = false;
         this.currentPathIndex = 0;
         this.pathPoints = [];
+        this.facing = 'right'; // 'left' or 'right'
         
         scene.add.existing(this);
+        
+        // Start with idle animation
+        this.play('idle');
     }
 
     getGridPosition() {
@@ -62,6 +65,16 @@ export default class Hero extends Phaser.GameObjects.Sprite {
         }
 
         const nextPoint = this.pathPoints[this.currentPathIndex + 1];
+        
+        // Determine movement direction and play appropriate animation
+        const movingLeft = nextPoint.x < this.x;
+        const newFacing = movingLeft ? 'left' : 'right';
+        
+        if (this.facing !== newFacing) {
+            this.facing = newFacing;
+        }
+        
+        this.play(`walk_${this.facing}`, true);
 
         this.scene.tweens.add({
             targets: this,
@@ -80,9 +93,14 @@ export default class Hero extends Phaser.GameObjects.Sprite {
         this.isMoving = false;
         this.updateGridPosition();
         this.pathPoints = [];
+        this.play('idle');
     }
 
     canStartNewMovement() {
         return !this.isMoving;
+    }
+
+    update() {
+        // Add any per-frame updates here if needed
     }
 } 

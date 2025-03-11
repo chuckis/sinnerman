@@ -32,12 +32,17 @@ export default class BaseScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('dummy', 'https://labs.phaser.io/assets/sprites/block.png');
+        // Load placeholder sprite for now
+        this.load.spritesheet('hero', 'https://labs.phaser.io/assets/sprites/dude.png', {
+            frameWidth: 32,
+            frameHeight: 48
+        });
     }
 
     create() {
         this.initializeGrid();
         this.setupPathfinding();
+        this.createAnimations();
         this.createHero();
         this.createNPC();
         this.setupCamera();
@@ -78,8 +83,32 @@ export default class BaseScene extends Phaser.Scene {
         this.easystar.setIterationsPerCalculation(1000);
     }
 
+    createAnimations() {
+        // Create placeholder animations
+        this.anims.create({
+            key: 'idle',
+            frames: this.anims.generateFrameNumbers('hero', { start: 4, end: 4 }),
+            frameRate: 10,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'walk_left',
+            frames: this.anims.generateFrameNumbers('hero', { start: 0, end: 3 }),
+            frameRate: 10,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: 'walk_right',
+            frames: this.anims.generateFrameNumbers('hero', { start: 5, end: 8 }),
+            frameRate: 10,
+            repeat: -1
+        });
+    }
+
     createHero() {
-        this.hero = new Hero(this, 0, 0, 'dummy');
+        this.hero = new Hero(this, 0, 0, 'hero');
     }
 
     createNPC() {
