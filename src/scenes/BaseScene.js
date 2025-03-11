@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import EasyStar from 'easystarjs';
 import NPC from '../entities/NPC';
 import Dialogue from '../entities/Dialogue';
+import Hero from '../entities/Hero';
 
 export default class BaseScene extends Phaser.Scene {
     constructor() {
@@ -16,23 +17,16 @@ export default class BaseScene extends Phaser.Scene {
         this.gridSize = 10;
         this.tileSize = 64;
         
-        // Movement state
-        this.currentGridX = 0;
-        this.currentGridY = 0;
-        this.currentPathIndex = 0;
-        this.isMoving = false;
-        
-        // Visual elements
-        this.debugText = null;
-        this.highlightTile = null;
-        this.mouseHighlightTile = null;
-        
         // Pathfinding
         this.easystar = new EasyStar.js();
         this.grid = [];
-        this.pathPoints = [];
-
-        // NPC and Dialogue
+        
+        // Visual elements
+        this.highlightTile = null;
+        this.mouseHighlightTile = null;
+        
+        // Game objects
+        this.hero = null;
         this.npc = null;
         this.dialogue = null;
     }
@@ -44,7 +38,7 @@ export default class BaseScene extends Phaser.Scene {
     create() {
         this.initializeGrid();
         this.setupPathfinding();
-        this.createDummy();
+        this.createHero();
         this.createNPC();
         this.setupCamera();
         this.setupInput();
@@ -55,7 +49,7 @@ export default class BaseScene extends Phaser.Scene {
 
     setupCamera() {
         this.cameras.main.setBackgroundColor('#2d2d2d');
-        this.cameras.main.startFollow(this.dummy, true, 0.1, 0.1);
+        this.cameras.main.startFollow(this.hero, true, 0.1, 0.1);
     }
 
     initializeGrid() {
@@ -79,40 +73,17 @@ export default class BaseScene extends Phaser.Scene {
     setupPathfinding() {
         this.easystar.setGrid(this.grid);
         this.easystar.setAcceptableTiles([0]);
-        this.easystar.enableDiagonals();
+        // this.easystar.enableDiagonals();
         this.easystar.enableCornerCutting();
         this.easystar.setIterationsPerCalculation(1000);
     }
 
-    createDummy() {
-        this.dummy = this.add.sprite(
-            this.getWorldX(this.currentGridX),
-            this.getWorldY(this.currentGridY),
-            'dummy'
-        );
-        this.dummy.setScale(1.5);
-        this.dummy.setTint(0xff0000);
-        this.dummy.setDepth(1);
-        
-        // Add physics body
-        this.physics.add.existing(this.dummy);
-        this.dummy.body.setSize(32, 32); // Adjust hitbox size
+    createHero() {
+        this.hero = new Hero(this, 0, 0, 'dummy');
     }
 
     createNPC() {
         this.npc = new NPC(this, 8 * this.tileSize + this.tileSize/2, 2 * this.tileSize + this.tileSize/2, 'dummy');
-        
-        // Add collision between dummy and NPC
-        this.physics.add.collider(this.dummy, this.npc, this.handleCollision, null, this);
-    }
-
-    handleCollision(dummy, npc) {
-        // Stop movement when colliding with NPC
-        if (this.isMoving) {
-            this.isMoving = false;
-            this.tweens.killTweensOf(this.dummy);
-            console.log('Collided with NPC!');
-        }
     }
 
     setupInput() {
@@ -122,21 +93,9 @@ export default class BaseScene extends Phaser.Scene {
 
     setupVisualElements() {
         this.drawGrid();
-        this.setupDebugText();
         this.setupHighlightTile();
         this.setupMouseHighlightTile();
         this.setupMouseMoveHandler();
-    }
-
-    setupDebugText() {
-        this.debugText = this.add.text(10, 10, '', {
-            fontFamily: 'Arial',
-            fontSize: '16px',
-            color: '#ffffff',
-            backgroundColor: '#000000',
-            padding: { x: 5, y: 5 }
-        });
-        this.debugText.setDepth(2);
     }
 
     setupHighlightTile() {
@@ -161,7 +120,7 @@ export default class BaseScene extends Phaser.Scene {
     }
 
     handleClick(pointer) {
-        if (this.isMoving) return;
+        if (!this.hero.canStartNewMovement()) return;
 
         const gridPos = this.screenToGrid(pointer.x, pointer.y);
         
@@ -213,9 +172,10 @@ export default class BaseScene extends Phaser.Scene {
             return;
         }
 
+        const heroPos = this.hero.getGridPosition();
         this.easystar.findPath(
-            this.currentGridX,
-            this.currentGridY,
+            heroPos.x,
+            heroPos.y,
             targetPos.x,
             targetPos.y,
             this.handlePathFound.bind(this)
@@ -236,81 +196,21 @@ export default class BaseScene extends Phaser.Scene {
             return;
         }
 
-        this.pathPoints = path.map(point => ({
-            x: this.getWorldX(point.x),
-            y: this.getWorldY(point.y)
-        }));
-
-        this.startMovement();
-    }
-
-    startMovement() {
-        this.currentPathIndex = 0;
-        this.isMoving = true;
-        this.moveToNextPoint();
-    }
-
-    getWorldX(gridX) {
-        return gridX * this.tileSize + this.tileSize / 2;
-    }
-
-    getWorldY(gridY) {
-        return gridY * this.tileSize + this.tileSize / 2;
-    }
-
-    moveToNextPoint() {
-        if (this.currentPathIndex >= this.pathPoints.length - 1) {
-            this.completeMovement();
-            return;
-        }
-
-        const currentPoint = this.pathPoints[this.currentPathIndex];
-        const nextPoint = this.pathPoints[this.currentPathIndex + 1];
-
-        this.tweens.add({
-            targets: this.dummy,
-            x: nextPoint.x,
-            y: nextPoint.y,
-            duration: 200,
-            ease: 'Linear',
-            onComplete: () => {
-                this.currentPathIndex++;
-                this.moveToNextPoint();
-            }
-        });
-    }
-
-    completeMovement() {
-        this.isMoving = false;
-        this.currentGridX = Math.floor(this.dummy.x / this.tileSize);
-        this.currentGridY = Math.floor(this.dummy.y / this.tileSize);
-        this.updateVisualFeedback();
+        this.hero.moveTo(path);
     }
 
     updateVisualFeedback() {
-        this.updateDebugText();
         this.updateHighlightTile();
         this.updateMouseHighlight();
     }
 
-    updateDebugText() {
-        this.debugText.setText([
-            `Current Grid Position: (${this.currentGridX}, ${this.currentGridY})`,
-            `Mouse Grid Position: (${this.mouseGridX}, ${this.mouseGridY})`,
-            `World Position: (${Math.round(this.dummy.x)}, ${Math.round(this.dummy.y)})`,
-            `Moving: ${this.isMoving ? 'Yes' : 'No'}`,
-            `Target: ${this.pathPoints.length > 0 ? `(${Math.floor(this.pathPoints[this.pathPoints.length - 1].x / this.tileSize)}, ${Math.floor(this.pathPoints[this.pathPoints.length - 1].y / this.tileSize)})` : 'None'}`,
-            `NPC Position: (8, 8)`,
-            `Can Interact: ${this.npc && this.npc.canInteract ? 'Yes' : 'No'}`
-        ]);
-    }
-
     updateHighlightTile() {
+        const heroPos = this.hero.getGridPosition();
         this.highlightTile.clear();
         this.highlightTile.lineStyle(2, 0x00ff00);
         this.highlightTile.strokeRect(
-            this.currentGridX * this.tileSize,
-            this.currentGridY * this.tileSize,
+            heroPos.x * this.tileSize,
+            heroPos.y * this.tileSize,
             this.tileSize,
             this.tileSize
         );
@@ -379,5 +279,13 @@ export default class BaseScene extends Phaser.Scene {
         if (this.npc) {
             this.npc.update();
         }
+    }
+
+    get currentGridX() {
+        return this.hero.gridX;
+    }
+
+    get currentGridY() {
+        return this.hero.gridY;
     }
 } 
