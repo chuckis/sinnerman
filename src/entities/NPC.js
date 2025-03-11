@@ -8,13 +8,15 @@ export default class NPC extends Phaser.GameObjects.Sprite {
         this.setTint(0xffff00); // Yellow color
         this.setDepth(1);
         
-        // Add physics body
-        scene.physics.add.existing(this, true); // true makes it static
-        this.body.setSize(32, 32); // Adjust hitbox size
+        // Add physics body for visual purposes only
+        scene.physics.add.existing(this, true);
+        this.body.setSize(32, 32);
+        
+        // Grid position
+        this.gridX = Math.floor(x / scene.tileSize);
+        this.gridY = Math.floor(y / scene.tileSize);
         
         // Interaction properties
-        this.interactionRadius = 64; // One tile distance
-        this.canInteract = false;
         this.hasStartedDialogue = false;
         this.dialogueDelay = 1000; // 1 second delay before starting dialogue
         this.dialogueTimer = null;
@@ -22,35 +24,32 @@ export default class NPC extends Phaser.GameObjects.Sprite {
         scene.add.existing(this);
     }
 
-    update() {
-        if (this.scene.dummy) {
-            const distance = Phaser.Math.Distance.Between(
-                this.x, this.y,
-                this.scene.dummy.x, this.scene.dummy.y
-            );
-            
-            const wasInteractable = this.canInteract;
-            this.canInteract = distance <= this.interactionRadius;
-            
-            // Visual feedback when interaction is possible
-            this.setAlpha(this.canInteract ? 1 : 0.7);
-
-            // Start dialogue timer when dummy comes close
-            if (this.canInteract && !wasInteractable && !this.hasStartedDialogue) {
-                this.startDialogueTimer();
-            }
-            // Cancel dialogue timer when dummy moves away
-            else if (!this.canInteract && wasInteractable) {
-                this.cancelDialogueTimer();
-            }
-        }
+    isNeighborCell(x1, y1, x2, y2) {
+        const dx = Math.abs(x1 - x2);
+        const dy = Math.abs(y1 - y2);
+        return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
     }
 
-    startDialogueTimer() {
-        this.dialogueTimer = this.scene.time.delayedCall(this.dialogueDelay, () => {
-            this.interact();
-            this.hasStartedDialogue = true;
-        });
+    update() {
+        const dummyGridX = this.scene.currentGridX;
+        const dummyGridY = this.scene.currentGridY;
+        
+        const isNeighbor = this.isNeighborCell(this.gridX, this.gridY, dummyGridX, dummyGridY);
+        
+        if (isNeighbor && !this.hasStartedDialogue) {
+            // Start dialogue timer when dummy is in neighboring cell
+            if (!this.dialogueTimer) {
+                this.dialogueTimer = this.scene.time.delayedCall(this.dialogueDelay, () => {
+                    this.interact();
+                    this.hasStartedDialogue = true;
+                });
+            }
+            this.setAlpha(1); // Full opacity when neighbor
+        } else if (!isNeighbor) {
+            this.cancelDialogueTimer();
+            this.hasStartedDialogue = false; // Reset dialogue state when not neighbors
+            this.setAlpha(0.7); // Set to less opaque when not neighbor
+        }
     }
 
     cancelDialogueTimer() {
@@ -61,8 +60,6 @@ export default class NPC extends Phaser.GameObjects.Sprite {
     }
 
     interact() {
-        if (!this.canInteract) return false;
-        
         const dialogue = [
             { speaker: 'Dummy', text: 'Hello!' },
             { speaker: 'NPC', text: 'Hello there! How can I help you today?' },
