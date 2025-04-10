@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import dialogue from './testdialogue';
 
 export default class NPC extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, texture) {
@@ -60,14 +61,8 @@ export default class NPC extends Phaser.GameObjects.Sprite {
     }
 
     interact() {
-        const dialogue = [
-            { speaker: 'Dummy', text: 'Hello!' },
-            { speaker: 'NPC', text: 'Hello there! How can I help you today?' },
-            { speaker: 'Dummy', text: 'Just passing by!' },
-            { speaker: 'NPC', text: 'Have a great day!' }
-        ];
         
-        this.scene.dialogue.startDialogue(dialogue);
+     this.scene.dialogue.startDialogue(dialogue);
         return true;
     }
 
