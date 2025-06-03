@@ -5,6 +5,7 @@ import Dialogue from '../entities/Dialogue';
 import Hero from '../entities/Hero';
 import GridManager from '../managers/GridManager';
 import VisualFeedbackManager from '../managers/VisualFeedbackManager';
+import Utils from '../Utils';
 
 export default class BaseScene extends Phaser.Scene {
     constructor() {
@@ -28,6 +29,12 @@ export default class BaseScene extends Phaser.Scene {
         this.hero = null;
         this.npc = null;
         this.dialogue = null;
+
+        this.hasStartedDialogue = false;
+        this.dialogueDelay = 1000; // 1 second delay before starting dialogue
+        this.dialogueTimer = null;
+
+        this.utils = new Utils();
     }
 
     preload() {
@@ -156,6 +163,37 @@ export default class BaseScene extends Phaser.Scene {
         this.visualFeedback.updateHighlightTile(this.hero.getGridPosition());
         if (this.npc) {
             this.npc.update();
+        }
+
+        const dummyGridX = this.hero.getGridPosition().x;
+        const dummyGridY = this.hero.getGridPosition().y;
+
+        const npcGridX = Math.floor(this.npc.x / this.tileSize);
+        const npcGridY = Math.floor(this.npc.y / this.tileSize);
+
+        const isNeighbor = this.utils.isNeighborCell(npcGridX, npcGridY, dummyGridX, dummyGridY);
+
+        if (isNeighbor && !this.hasStartedDialogue) {
+            // Start dialogue timer when dummy is in neighboring cell
+            if (!this.dialogueTimer) {
+                this.dialogueTimer = this.scene.time.delayedCall(this.dialogueDelay, () => {
+                    this.interact();
+                    this.hasStartedDialogue = true;
+                });
+            }
+            this.setAlpha(1); // Full opacity when neighbor
+        } else if (!isNeighbor) {
+            this.cancelDialogueTimer();
+            this.hasStartedDialogue = false; // Reset dialogue state when not neighbors
+            // this.setAlpha(0.7); // Set to less opaque when not neighbor
+        }
+
+    }
+
+    cancelDialogueTimer() {
+        if (this.dialogueTimer) {
+            this.dialogueTimer.destroy();
+            this.dialogueTimer = null;
         }
     }
 

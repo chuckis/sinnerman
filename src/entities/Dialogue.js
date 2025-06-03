@@ -38,7 +38,7 @@ export default class Dialogue {
         this.speakerText = this.scene.add.text(
             this.scene.cameras.main.width - 290,
             10,
-            '',
+            'Speaker',
             {
                 fontFamily: 'Arial',
                 fontSize: '18px',
@@ -83,7 +83,7 @@ export default class Dialogue {
         this.text.setVisible(true);
         this.speakerText.setVisible(true);
         this.continueText.setVisible(true);
-        this.historyContainer.setVisible(true);
+        // this.historyContainer.setVisible(true);
 
         // Fade in effect
         this.scene.tweens.add({
