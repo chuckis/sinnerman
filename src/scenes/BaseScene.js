@@ -159,6 +159,7 @@ export default class BaseScene extends Phaser.Scene {
     }
     // #endregion
 
+
     update() {
         this.visualFeedback.updateHighlightTile(this.hero.getGridPosition());
         if (this.npc) {
@@ -176,16 +177,16 @@ export default class BaseScene extends Phaser.Scene {
         if (isNeighbor && !this.hasStartedDialogue) {
             // Start dialogue timer when dummy is in neighboring cell
             if (!this.dialogueTimer) {
-                this.dialogueTimer = this.scene.time.delayedCall(this.dialogueDelay, () => {
-                    this.interact();
+                this.dialogueTimer = this.time.delayedCall(this.dialogueDelay, () => {
+                    this.npc.interact();
                     this.hasStartedDialogue = true;
                 });
             }
-            this.setAlpha(1); // Full opacity when neighbor
+            this.npc.setAlpha(1); // Full opacity when neighbor
         } else if (!isNeighbor) {
             this.cancelDialogueTimer();
             this.hasStartedDialogue = false; // Reset dialogue state when not neighbors
-            // this.setAlpha(0.7); // Set to less opaque when not neighbor
+            this.npc.setAlpha(0.7); // Set to less opaque when not neighbor
         }
 
     }
@@ -198,7 +199,7 @@ export default class BaseScene extends Phaser.Scene {
     }
 
     setupCamera() {
-        this.cameras.main.setBackgroundColor('#2d2d2d');
+        this.cameras.main.setBackgroundColor('rgba(160,152,152,0.93)');
         this.cameras.main.startFollow(this.hero, true, 0.1, 0.1);
     }
 

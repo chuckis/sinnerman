@@ -21,7 +21,7 @@ export default class Dialogue {
         // Create text for dialogue
         this.text = this.scene.add.text(
             this.scene.cameras.main.width - 290,
-            20,
+            30,
             '',
             {
                 fontFamily: 'Arial',
@@ -38,7 +38,7 @@ export default class Dialogue {
         this.speakerText = this.scene.add.text(
             this.scene.cameras.main.width - 290,
             10,
-            'Speaker',
+            '',
             {
                 fontFamily: 'Arial',
                 fontSize: '18px',
