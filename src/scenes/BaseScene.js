@@ -7,6 +7,7 @@ import GridManager from '../managers/GridManager';
 import VisualFeedbackManager from '../managers/VisualFeedbackManager';
 import Utils from '../Utils';
 import DialogSystem from '../managers/DialogSystem';
+import DialogUIManager from '../managers/DialogUIManager';
 
 export default class BaseScene extends Phaser.Scene {
     constructor() {
@@ -15,18 +16,36 @@ export default class BaseScene extends Phaser.Scene {
         this.dialogSystem = new DialogSystem();
     }
 
+    /**
+     * Initializes the dialog system and UI manager
+     * Can be overridden by child classes to customize dialog behavior
+     */
+    initializeDialogSystem() {
+        // Create dialog UI manager
+        this.dialogUI = new DialogUIManager(this);
+
+        // Set up callbacks
+        this.dialogUI.setChoiceCallback(this.makeChoice.bind(this));
+        this.dialogUI.setContinueCallback(this.continueDialog.bind(this));
+        this.dialogUI.setEndCallback(() => {
+            this.isDialogActive = false;
+            this.hasStartedDialogue = false;
+            this.dialogSystem.currentDialog = null;
+        });
+    }
+
     initializeProperties() {
         // Grid configuration
         this.gridSize = 10;
         this.tileSize = 64;
-        
+
         // Managers
         this.gridManager = null;
         this.visualFeedback = null;
-        
+
         // Pathfinding
         this.easystar = new EasyStar.js();
-        
+
         // Game objects
         this.hero = null;
         this.npc = null;
@@ -53,10 +72,11 @@ export default class BaseScene extends Phaser.Scene {
         this.setupPathfinding();
         this.createGameObjects();
         this.setupGameSystems();
-        this.createDialogUI(); // Добавить создание UI для диалогов
+
+        // Initialize dialog system and UI
+        this.initializeDialogSystem();
         const dialogData = this.cache.json.get('dialogs');
         this.dialogSystem.loadDialogData(dialogData);
-
     }
 
     // #region Setup Methods
@@ -98,7 +118,7 @@ export default class BaseScene extends Phaser.Scene {
         if (!this.hero.canStartNewMovement()) return;
 
         const gridPos = this.gridManager.screenToGrid(pointer.x, pointer.y);
-        
+
         if (!this.gridManager.isValidPosition(gridPos)) {
             console.log('Target position is outside the grid!');
             return;
@@ -138,7 +158,7 @@ export default class BaseScene extends Phaser.Scene {
     findPath(targetPos) {
         const npcGridX = Math.floor(this.npc.x / this.tileSize);
         const npcGridY = Math.floor(this.npc.y / this.tileSize);
-        
+
         if (targetPos.x === npcGridX && targetPos.y === npcGridY) {
             console.log('Cannot move through NPC!');
             return;
@@ -164,7 +184,7 @@ export default class BaseScene extends Phaser.Scene {
         const hasObstacle = path.some(point => 
             this.gridManager.grid[point.y][point.x] === 1
         );
-        
+
         if (hasObstacle) {
             console.log('Path goes through obstacle!');
             return;
@@ -241,207 +261,50 @@ export default class BaseScene extends Phaser.Scene {
         });
     }
 
-    // Добавить методы для работы с диалогами
-    createDialogUI() {
-        this.dialogContainer = this.add.container(0, 0);
-        this.dialogContainer.setVisible(false);
-        this.dialogContainer.setScrollFactor(0); // UI фиксирован на экране
+    // Dialog methods are now handled by DialogUIManager
 
-        // Фон диалога
-        this.dialogBg = this.add.rectangle(400, 500, 750, 200, 0x000000, 0.8);
-        this.dialogBg.setStrokeStyle(2, 0xffffff);
-
-        // Кнопка закрытия (крестик)
-        this.closeButton = this.add.text(760, 410, '✕', {
-            fontSize: '24px',
-            fill: '#ffffff',
-            backgroundColor: '#ff0000',
-            padding: { x: 8, y: 4 }
-        });
-        this.closeButton.setInteractive();
-        this.closeButton.on('pointerdown', () => this.endDialog());
-        this.closeButton.on('pointerover', () => {
-            this.closeButton.setStyle({ fill: '#ffff00' });
-        });
-        this.closeButton.on('pointerout', () => {
-            this.closeButton.setStyle({ fill: '#ffffff' });
-        });
-
-        // Текст диалога
-        this.dialogText = this.add.text(50, 420, '', {
-            fontSize: '18px',
-            fill: '#ffffff',
-            wordWrap: { width: 700 }
-        });
-
-        // Имя говорящего
-        this.speakerName = this.add.text(50, 390, '', {
-            fontSize: '16px',
-            fill: '#ffff00',
-            fontStyle: 'bold'
-        });
-
-        // Контейнер для выборов
-        this.choicesContainer = this.add.container(0, 0);
-
-        // Добавляем все в основной контейнер
-        this.dialogContainer.add([
-            this.dialogBg,
-            this.closeButton,
-            this.dialogText,
-            this.speakerName,
-            this.choicesContainer
-        ]);
-
-        // Устанавливаем фиксированную позицию относительно камеры
-        this.dialogContainer.setDepth(1000); // Поверх игровых объектов
-    }
-
+    /**
+     * Starts a dialog with the given ID
+     * @param {string} dialogId - The ID of the dialog to start
+     */
     startDialog(dialogId) {
         const dialogData = this.dialogSystem.startDialog(dialogId);
         if (dialogData) {
-            this.showDialog(dialogData);
+            this.isDialogActive = true; // Block movement
+            this.dialogUI.showDialog(dialogData);
         }
     }
 
-    showDialog(dialogData) {
-        this.dialogContainer.setVisible(true);
-        this.dialogText.setText(dialogData.text);
-        this.speakerName.setText(dialogData.speaker || '');
-
-        this.choicesContainer.removeAll(true);
-
-        if (dialogData.choices && dialogData.choices.length > 0) {
-            this.showChoices(dialogData.choices);
-        } else {
-            this.showContinueButton(dialogData.autoNext);
-        }
-    }
-
-    showChoices(choices) {
-        choices.forEach((choice, index) => {
-            const button = this.add.rectangle(400, 550 + index * 40, 700, 35, 0x333333, 0.8);
-            button.setStrokeStyle(2, 0x666666);
-            button.setScrollFactor(0);
-            button.setDepth(1001);
-            button.setInteractive();
-            
-            const buttonText = this.add.text(70, 550 + index * 40, choice.text, {
-                fontSize: '16px',
-                fill: '#ffffff',
-                wordWrap: { width: 650 }
-            });
-            buttonText.setScrollFactor(0);
-            buttonText.setDepth(1002);
-            buttonText.setOrigin(0, 0.5);
-            
-            // Hover эффекты
-            button.on('pointerover', () => {
-                button.setFillStyle(0x555555, 0.9);
-                button.setStrokeStyle(2, 0xffffff);
-                buttonText.setStyle({ fill: '#ffff00' });
-            });
-            
-            button.on('pointerout', () => {
-                button.setFillStyle(0x333333, 0.8);
-                button.setStrokeStyle(2, 0x666666);
-                buttonText.setStyle({ fill: '#ffffff' });
-            });
-            
-            button.on('pointerdown', () => {
-                console.log(`Choice ${index} clicked`);
-                this.makeChoice(index);
-            });
-
-            this.choicesContainer.add([button, buttonText]);
-        });
-    }
-
-    showContinueButton(autoNext) {
-        const button = this.add.rectangle(400, 550, 300, 35, 0x004400, 0.8);
-        button.setStrokeStyle(2, 0x008800);
-        button.setScrollFactor(0);
-        button.setDepth(1001);
-        button.setInteractive();
-        
-        const buttonText = this.add.text(400, 550, 'Продолжить', {
-            fontSize: '16px',
-            fill: '#ffffff',
-            fontStyle: 'bold'
-        });
-        buttonText.setScrollFactor(0);
-        buttonText.setDepth(1002);
-        buttonText.setOrigin(0.5, 0.5);
-        
-        // Hover эффекты
-        button.on('pointerover', () => {
-            button.setFillStyle(0x006600, 0.9);
-            button.setStrokeStyle(2, 0x00ff00);
-            buttonText.setStyle({ fill: '#ffff00' });
-        });
-        
-        button.on('pointerout', () => {
-            button.setFillStyle(0x004400, 0.8);
-            button.setStrokeStyle(2, 0x008800);
-            buttonText.setStyle({ fill: '#ffffff' });
-        });
-        
-        button.on('pointerdown', () => {
-            console.log('Continue button clicked');
-            this.continueDialog();
-        });
-
-        this.choicesContainer.add([button, buttonText]);
-    }
-
+    /**
+     * Handles a choice selection in the dialog
+     * @param {number} choiceIndex - The index of the selected choice
+     */
     makeChoice(choiceIndex) {
-        console.log(`Making choice: ${choiceIndex}`); // Для отладки
+        console.log(`Making choice: ${choiceIndex}`);
         const nextDialog = this.dialogSystem.makeChoice(choiceIndex);
         if (nextDialog) {
-            this.showDialog(nextDialog);
+            this.dialogUI.showDialog(nextDialog);
         } else {
             this.endDialog();
         }
     }
 
+    /**
+     * Continues to the next dialog
+     */
     continueDialog() {
         const nextDialog = this.dialogSystem.continueDialog();
         if (nextDialog) {
-            this.showDialog(nextDialog);
+            this.dialogUI.showDialog(nextDialog);
         } else {
             this.endDialog();
         }
     }
 
-    startDialog(dialogId) {
-        const dialogData = this.dialogSystem.startDialog(dialogId);
-        if (dialogData) {
-            this.showDialog(dialogData);
-        }
-    }
-
-    showDialog(dialogData) {
-        this.isDialogActive = true; // Блокируем движение
-        this.dialogContainer.setVisible(true);
-        this.dialogText.setText(dialogData.text);
-        this.speakerName.setText(dialogData.speaker || '');
-
-        this.choicesContainer.removeAll(true);
-
-        if (dialogData.choices && dialogData.choices.length > 0) {
-            this.showChoices(dialogData.choices);
-        } else {
-            this.showContinueButton(dialogData.autoNext);
-        }
-    }
-
+    /**
+     * Ends the current dialog
+     */
     endDialog() {
-        this.isDialogActive = false;
-        this.dialogContainer.setVisible(false);
-        this.hasStartedDialogue = false;
-        this.dialogSystem.currentDialog = null;
-        
-        // Очищаем контейнер с кнопками
-        this.choicesContainer.removeAll(true);
+        this.dialogUI.endDialog();
     }
 }
