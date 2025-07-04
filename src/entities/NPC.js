@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import dialogue from './testdialogue';
+import {dialogue} from './testdialogue';
 
 export default class NPC extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, texture) {
@@ -24,7 +24,6 @@ export default class NPC extends Phaser.GameObjects.Sprite {
     }
 
     interact() {
-        
      this.scene.dialogue.startDialogue(dialogue);
         return true;
     }

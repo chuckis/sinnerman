@@ -26,17 +26,21 @@ export class MainMenu extends Scene
         };
 
         // Game button
-        const gameButton = this.add.text(512, 520, 'Start Game', buttonStyle)
-            .setOrigin(0.5)
-            .setInteractive({ useHandCursor: true });
+        // const gameButton = this.add.text(512, 520, 'Start Game', buttonStyle)
+        //     .setOrigin(0.5)
+        //     .setInteractive({ useHandCursor: true });
 
         // Base Scene button
         const baseSceneButton = this.add.text(512, 570, 'Test Base Scene', buttonStyle)
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true });
 
+        const dialogButton = this.add.text(512, 520, 'DialogExample', buttonStyle)
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true });
+
         // Add hover effects
-        [gameButton, baseSceneButton].forEach(button => {
+        [baseSceneButton, dialogButton].forEach(button => {
             button.on('pointerover', () => {
                 button.setStyle({ backgroundColor: '#333333' });
             });
@@ -46,8 +50,8 @@ export class MainMenu extends Scene
         });
 
         // Add click handlers
-        gameButton.on('pointerdown', () => {
-            this.scene.start('Game');
+        dialogButton.on('pointerdown', () => {
+            this.scene.start('DialogExample');
         });
 
         baseSceneButton.on('pointerdown', () => {

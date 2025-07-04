@@ -5,6 +5,7 @@ import { MainMenu } from './scenes/MainMenu';
 import { Preloader } from './scenes/Preloader';
 import { Example } from './scenes/Example';
 import BaseScene from './scenes/BaseScene';
+import DialogExample from'./scenes/DialogExample';
 
 //  Find out more information about the Game Config at:
 //  https://newdocs.phaser.io/docs/3.70.0/Phaser.Types.Core.GameConfig
@@ -40,7 +41,8 @@ const config = {
         Game,
         GameOver,
         Example,
-        BaseScene
+        BaseScene,
+        DialogExample
     ]
 };
 

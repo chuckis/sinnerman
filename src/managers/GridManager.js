@@ -12,7 +12,7 @@ export default class GridManager {
             this.grid[y] = Array(this.gridSize).fill(0);
         }
 
-        // Add default obstacles
+        // Add default obstacles!! For early testing purposes only!
         const obstacles = [
             { x: 2, y: 2 },
             { x: 3, y: 3 },
