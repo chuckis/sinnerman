@@ -244,6 +244,22 @@ export default class BaseScene extends Phaser.Scene {
         this.dialogBg = this.add.rectangle(400, 500, 750, 200, 0x000000, 0.8);
         this.dialogBg.setStrokeStyle(2, 0xffffff);
 
+        // Кнопка закрытия (крестик)
+        this.closeButton = this.add.text(760, 410, '✕', {
+            fontSize: '24px',
+            fill: '#ffffff',
+            backgroundColor: '#ff0000',
+            padding: { x: 8, y: 4 }
+        });
+        this.closeButton.setInteractive();
+        this.closeButton.on('pointerdown', () => this.endDialog());
+        this.closeButton.on('pointerover', () => {
+            this.closeButton.setStyle({ fill: '#ffff00' });
+        });
+        this.closeButton.on('pointerout', () => {
+            this.closeButton.setStyle({ fill: '#ffffff' });
+        });
+
         // Текст диалога
         this.dialogText = this.add.text(50, 420, '', {
             fontSize: '18px',
@@ -264,6 +280,7 @@ export default class BaseScene extends Phaser.Scene {
         // Добавляем все в основной контейнер
         this.dialogContainer.add([
             this.dialogBg,
+            this.closeButton,
             this.dialogText,
             this.speakerName,
             this.choicesContainer
@@ -295,6 +312,10 @@ export default class BaseScene extends Phaser.Scene {
     }
 
     showChoices(choices) {
+        // Очищаем предыдущие обработчики клавиатуры
+        this.input.keyboard.removeAllKeys();
+        this.setupInput(); // Восстанавливаем основные обработчики
+
         choices.forEach((choice, index) => {
             const button = this.add.text(70, 550 + index * 30, `${index + 1}. ${choice.text}`, {
                 fontSize: '16px',
@@ -318,14 +339,23 @@ export default class BaseScene extends Phaser.Scene {
             fontStyle: 'italic'
         });
 
+        button.setScrollFactor(0);
+        button.setDepth(1001);
         button.setInteractive();
-        button.on('pointerdown', () => this.continueDialog());
+        button.on('pointerdown', () => {
+            console.log('Continue button clicked'); // Для отладки
+            this.dialogue.continueDialog();
+        });
         
         this.choicesContainer.add(button);
-        this.input.keyboard.once('keydown-ENTER', () => this.continueDialog());
+        this.input.keyboard.once('keydown-ENTER', () => {
+            console.log('Enter key pressed'); // Для отладки
+            this.dialogue.continueDialog();
+        });
     }
 
     makeChoice(choiceIndex) {
+        console.log(`Making choice: ${choiceIndex}`); // Для отладки
         const nextDialog = this.dialogSystem.makeChoice(choiceIndex);
         if (nextDialog) {
             this.showDialog(nextDialog);
@@ -343,8 +373,25 @@ export default class BaseScene extends Phaser.Scene {
         }
     }
 
-    endDialog() {
-        this.dialogContainer.setVisible(false);
-        this.hasStartedDialogue = false;
+    startDialog(dialogId) {
+        const dialogData = this.dialogSystem.startDialog(dialogId);
+        if (dialogData) {
+            this.showDialog(dialogData);
+        }
+    }
+
+    showDialog(dialogData) {
+        this.isDialogActive = true; // Блокируем движение
+        this.dialogContainer.setVisible(true);
+        this.dialogText.setText(dialogData.text);
+        this.speakerName.setText(dialogData.speaker || '');
+
+        this.choicesContainer.removeAll(true);
+
+        if (dialogData.choices && dialogData.choices.length > 0) {
+            this.showChoices(dialogData.choices);
+        } else {
+            this.showContinueButton(dialogData.autoNext);
+        }
     }
 }

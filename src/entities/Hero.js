@@ -97,10 +97,10 @@ export default class Hero extends Phaser.GameObjects.Sprite {
     }
 
     canStartNewMovement() {
-        return !this.isMoving;
+        return !this.isMoving && !this.scene.isDialogActive; // Проверка диалога
     }
 
     update() {
         // Add any per-frame updates here if needed
     }
-} 
+}
