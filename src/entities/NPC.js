@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import {dialogue} from './testdialogue';
 
 export default class NPC extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, texture) {
@@ -18,13 +17,15 @@ export default class NPC extends Phaser.GameObjects.Sprite {
         this.gridY = Math.floor(y / scene.tileSize);
 
         scene.add.existing(this);
+        
+        this.dialogId = 'guard_encounter'; // ID диалога для этого NPC
     }
 
     update() {
     }
 
     interact() {
-     this.scene.dialogue.startDialogue(dialogue);
+        this.scene.startDialog(this.dialogId);
         return true;
     }
 

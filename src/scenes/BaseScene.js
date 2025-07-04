@@ -6,11 +6,13 @@ import Hero from '../entities/Hero';
 import GridManager from '../managers/GridManager';
 import VisualFeedbackManager from '../managers/VisualFeedbackManager';
 import Utils from '../Utils';
+import DialogSystem from '../managers/DialogSystem';
 
 export default class BaseScene extends Phaser.Scene {
     constructor() {
         super({ key: 'BaseScene' });
         this.initializeProperties();
+        this.dialogSystem = new DialogSystem();
     }
 
     initializeProperties() {
@@ -42,6 +44,8 @@ export default class BaseScene extends Phaser.Scene {
             frameWidth: 32,
             frameHeight: 48
         });
+        this.load.json('dialogs', 'dialogs/example-dialog.json');
+
     }
 
     create() {
@@ -49,6 +53,10 @@ export default class BaseScene extends Phaser.Scene {
         this.setupPathfinding();
         this.createGameObjects();
         this.setupGameSystems();
+        this.createDialogUI(); // Добавить создание UI для диалогов
+        const dialogData = this.cache.json.get('dialogs');
+        this.dialogSystem.loadDialogData(dialogData);
+
     }
 
     // #region Setup Methods
@@ -225,4 +233,118 @@ export default class BaseScene extends Phaser.Scene {
             repeat: -1
         });
     }
-} 
+
+    // Добавить методы для работы с диалогами
+    createDialogUI() {
+        this.dialogContainer = this.add.container(0, 0);
+        this.dialogContainer.setVisible(false);
+        this.dialogContainer.setScrollFactor(0); // UI фиксирован на экране
+
+        // Фон диалога
+        this.dialogBg = this.add.rectangle(400, 500, 750, 200, 0x000000, 0.8);
+        this.dialogBg.setStrokeStyle(2, 0xffffff);
+
+        // Текст диалога
+        this.dialogText = this.add.text(50, 420, '', {
+            fontSize: '18px',
+            fill: '#ffffff',
+            wordWrap: { width: 700 }
+        });
+
+        // Имя говорящего
+        this.speakerName = this.add.text(50, 390, '', {
+            fontSize: '16px',
+            fill: '#ffff00',
+            fontStyle: 'bold'
+        });
+
+        // Контейнер для выборов
+        this.choicesContainer = this.add.container(0, 0);
+
+        // Добавляем все в основной контейнер
+        this.dialogContainer.add([
+            this.dialogBg,
+            this.dialogText,
+            this.speakerName,
+            this.choicesContainer
+        ]);
+
+        // Устанавливаем фиксированную позицию относительно камеры
+        this.dialogContainer.setDepth(1000); // Поверх игровых объектов
+    }
+
+    startDialog(dialogId) {
+        const dialogData = this.dialogSystem.startDialog(dialogId);
+        if (dialogData) {
+            this.showDialog(dialogData);
+        }
+    }
+
+    showDialog(dialogData) {
+        this.dialogContainer.setVisible(true);
+        this.dialogText.setText(dialogData.text);
+        this.speakerName.setText(dialogData.speaker || '');
+
+        this.choicesContainer.removeAll(true);
+
+        if (dialogData.choices && dialogData.choices.length > 0) {
+            this.showChoices(dialogData.choices);
+        } else {
+            this.showContinueButton(dialogData.autoNext);
+        }
+    }
+
+    showChoices(choices) {
+        choices.forEach((choice, index) => {
+            const button = this.add.text(70, 550 + index * 30, `${index + 1}. ${choice.text}`, {
+                fontSize: '16px',
+                fill: '#ffffff',
+                backgroundColor: '#333333',
+                padding: { x: 10, y: 5 }
+            });
+
+            button.setInteractive();
+            button.on('pointerdown', () => this.makeChoice(index));
+
+            this.choicesContainer.add(button);
+            this.input.keyboard.on(`keydown-${index + 1}`, () => this.makeChoice(index));
+        });
+    }
+
+    showContinueButton(autoNext) {
+        const button = this.add.text(70, 550, 'Нажмите ENTER для продолжения', {
+            fontSize: '16px',
+            fill: '#cccccc',
+            fontStyle: 'italic'
+        });
+
+        button.setInteractive();
+        button.on('pointerdown', () => this.continueDialog());
+        
+        this.choicesContainer.add(button);
+        this.input.keyboard.once('keydown-ENTER', () => this.continueDialog());
+    }
+
+    makeChoice(choiceIndex) {
+        const nextDialog = this.dialogSystem.makeChoice(choiceIndex);
+        if (nextDialog) {
+            this.showDialog(nextDialog);
+        } else {
+            this.endDialog();
+        }
+    }
+
+    continueDialog() {
+        const nextDialog = this.dialogSystem.continueDialog();
+        if (nextDialog) {
+            this.showDialog(nextDialog);
+        } else {
+            this.endDialog();
+        }
+    }
+
+    endDialog() {
+        this.dialogContainer.setVisible(false);
+        this.hasStartedDialogue = false;
+    }
+}
