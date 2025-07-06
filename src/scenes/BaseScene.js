@@ -68,6 +68,9 @@ export default class BaseScene extends Phaser.Scene {
     }
 
     create() {
+
+        this.scene.get('ParentScene').resize();
+
         this.setupManagers();
         this.setupPathfinding();
         this.createGameObjects();

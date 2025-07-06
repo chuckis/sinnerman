@@ -13,3 +13,14 @@ body {
     justify-content: center;
     align-items: center;
 }
+
+canvas {
+    display: block;
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 100%;
+    max-height: 100vh; /* Or a percentage of the viewport height */
+}

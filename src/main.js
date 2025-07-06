@@ -6,26 +6,22 @@ import { Preloader } from './scenes/Preloader';
 import { Example } from './scenes/Example';
 import BaseScene from './scenes/BaseScene';
 import DialogExample from'./scenes/DialogExample';
+import ParentScene from "./scenes/ParentScene.js";
 
 //  Find out more information about the Game Config at:
 //  https://newdocs.phaser.io/docs/3.70.0/Phaser.Types.Core.GameConfig
 const config = {
     type: Phaser.AUTO,
-    width: 1024,
-    height: 768,
-    parent: 'game-container',
-    backgroundColor: '#028af8',
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        min: {
-            width: 800,
-            height: 600
-        },
-        max: {
-            width: 1600,
-            height: 1200
-        }
+    parent: 'body',
+    width: window.innerWidth,
+    height: window.innerHeight,
+    backgroundColor: "#2d7c45",
+    dom: {
+        createContainer: true
+    },
+    scale:{
+        mode: Phaser.Scale.RESIZE,
+        autoCenter: Phaser.Scale.CENTER_BOTH
     },
     physics: {
         default: 'arcade',
@@ -42,8 +38,33 @@ const config = {
         GameOver,
         Example,
         BaseScene,
+        ParentScene,
         DialogExample
     ]
 };
 
-export default new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+const onChangeScreen = () => {
+    game.scale.resize(window.innerWidth, window.innerHeight);
+    if (game.scene.scenes.length > 0) {
+        let currentScene = game.scene.scenes[0];
+        if (currentScene instanceof MainMenu) {
+            currentScene.resize();
+        }
+        else if (currentScene instanceof ParentScene) {
+
+        }
+    }
+}
+
+const _orientation = screen.orientation;
+_orientation.addEventListener('change', () => {
+    onChangeScreen();
+});
+
+window.addEventListener('resize', () => {
+    onChangeScreen();
+});
+
+// export default new Phaser.Game(config);
