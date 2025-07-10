@@ -5,7 +5,6 @@ import { MainMenu } from './scenes/MainMenu';
 import { Preloader } from './scenes/Preloader';
 import { Example } from './scenes/Example';
 import BaseScene from './scenes/BaseScene';
-import DialogExample from'./scenes/DialogExample';
 import ParentScene from "./scenes/ParentScene.js";
 
 //  Find out more information about the Game Config at:
@@ -38,8 +37,7 @@ const config = {
         GameOver,
         Example,
         BaseScene,
-        ParentScene,
-        DialogExample
+        ParentScene
     ]
 };
 
